@@ -3,19 +3,16 @@ import numpy as np
 import pandas as pd
 import math
 
-# Configuración de la página web
 st.set_page_config(
     page_title="Proyecto Final - Métodos Numéricos",
     page_icon="🧮",
     layout="wide"
 )
 
-# Título Principal
 st.title("🧮 Aplicación Interactiva de Métodos Numéricos")
 st.markdown("### Materia: Matemáticas Aplicadas para la Computación (Proyecto Final)")
 st.write("Esta plataforma web permite ejecutar e interactuar con los tres métodos numéricos seleccionados para el proyecto, visualizando los pasos y resultados de manera dinámica.")
 
-# Menú de navegación por pestañas (Tabs)
 tab1, tab2, tab3, tab_info = st.tabs([
     "🧩 1. Gauss-Jordan (Sistemas)", 
     "📈 2. Interpolación de Lagrange", 
@@ -23,7 +20,6 @@ tab1, tab2, tab3, tab_info = st.tabs([
     "📋 Información del Proyecto"
 ])
 
-# --- PESTAÑA 1: GAUSS-JORDAN ---
 with tab1:
     st.header("Método de Eliminación de Gauss-Jordan")
     st.write("Resuelve un sistema de ecuaciones lineales de la forma $Ax = B$ transformando la matriz aumentada en una matriz identidad.")
@@ -33,9 +29,7 @@ with tab1:
     st.subheader("Matriz Aumentada [A | B]")
     st.info("Modifica los valores directamente en la tabla tipo Excel de abajo (la última columna representa el vector de resultados B):")
     
-    # Crear matriz inicial de ceros
     default_matrix = np.zeros((n, n + 1))
-    # Valores de ejemplo preestablecidos para un sistema 3x3 si n == 3
     if n == 3:
         default_matrix = np.array([
             [1.0, 2.0, 3.0, 5.0],
@@ -46,17 +40,14 @@ with tab1:
     column_names = [f"x{i+1}" for i in range(n)] + ["Resultado (B)"]
     df_matrix = pd.DataFrame(default_matrix, columns=column_names)
     
-    # Editor interactivo de datos
     edited_df = st.data_editor(df_matrix, use_container_width=True)
     
     if st.button("Resolver Sistema", type="primary"):
         a = edited_df.to_numpy(dtype=float).copy()
         error = False
         
-        # Clonar para operaciones
         for i in range(n):
             if a[i][i] == 0.0:
-                # Intento simple de pivoteo
                 for k in range(i + 1, n):
                     if a[k][i] != 0.0:
                         a[[i, k]] = a[[k, i]]
@@ -73,7 +64,6 @@ with tab1:
                     a[j] = a[j] - ratio * a[i]
                     
         if not error:
-            # Normalizar diagonal
             for i in range(n):
                 a[i] = a[i] / a[i][i]
                 
@@ -84,11 +74,9 @@ with tab1:
             for i in range(n):
                 col_results[i].metric(label=f"Variable x_{i+1}", value=f"{a[i][n]:.4f}")
                 
-            # Mostrar matriz resultante
             st.markdown("**Matriz Identidad Aumentada Resultante:**")
             st.dataframe(pd.DataFrame(a, columns=column_names))
 
-# --- PESTAÑA 2: LAGRANGE ---
 with tab2:
     st.header("Interpolación Numérica de Lagrange")
     st.write("Encuentra el valor aproximado de una función polinomial en un punto objetivo dado un conjunto de coordenadas conocidas $(x, y)$.")
@@ -133,7 +121,6 @@ with tab2:
             for d in detalles:
                 st.write(d)
 
-# --- PESTAÑA 3: EULER ---
 with tab3:
     st.header("Método de Euler para Ecuaciones Diferenciales")
     st.write("Aproxima numéricamente la solución de una ecuación diferencial ordinaria (EDO) de primer orden de la forma $\frac{dy}{dx} = f(x, y)$.")
@@ -168,7 +155,6 @@ with tab3:
                 else:
                     x = x - h
                 
-                # Evaluar f(x,y) en el nuevo punto si no es la última iteración
                 try:
                     f_val_next = eval(expr, {"__builtins__": None, "math": math}, {"x": x, "y": y})
                 except:
@@ -187,14 +173,12 @@ with tab3:
             st.subheader("Tabla Descriptiva de Iteraciones")
             st.dataframe(df_results, use_container_width=True)
             
-            # Gráfico de la aproximación
             st.subheader("📈 Gráfico de la Trayectoria de Aproximación")
             st.line_chart(data=df_results, x="x", y="y")
             
         except Exception as e:
             st.error(f"Error en la expresión matemática o en los datos: {e}")
 
-# --- PESTAÑA 4: INFORMACIÓN ---
 with tab_info:
     st.header("Información de Entrega del Proyecto")
     st.markdown("""
