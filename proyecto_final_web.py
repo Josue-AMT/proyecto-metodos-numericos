@@ -15,7 +15,7 @@ st.write("Esta plataforma web permite ejecutar e interactuar con los tres métod
 
 tab1, tab2, tab3 = st.tabs([
     "🧩 1. Gauss-Jordan (Sistemas)", 
-    "📈 2. Interpolación de Lagrange", 
+    "📈 2. Interpolación de Newton", 
     "📉 3. Método de Euler (EDO)",
 ])
 
