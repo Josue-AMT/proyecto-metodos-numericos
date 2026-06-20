@@ -13,11 +13,10 @@ st.title("🧮 Aplicación Interactiva de Métodos Numéricos")
 st.markdown("### Materia: Matemáticas Aplicadas para la Computación (Proyecto Final)")
 st.write("Esta plataforma web permite ejecutar e interactuar con los tres métodos numéricos seleccionados para el proyecto, visualizando los pasos y resultados de manera dinámica.")
 
-tab1, tab2, tab3, tab_info = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "🧩 1. Gauss-Jordan (Sistemas)", 
     "📈 2. Interpolación de Lagrange", 
     "📉 3. Método de Euler (EDO)",
-    "📋 Información del Proyecto"
 ])
 
 with tab1:
@@ -178,15 +177,3 @@ with tab3:
             
         except Exception as e:
             st.error(f"Error en la expresión matemática o en los datos: {e}")
-
-with tab_info:
-    st.header("Información de Entrega del Proyecto")
-    st.markdown("""
-    **Materia:** Matemáticas Aplicadas para la Computación  
-    **Carrera:** Licenciatura en Informática  
-    **Estructura del Proyecto Entregable:**
-    1. **Código Fuente:** Contenido en este módulo interactivo (`proyecto_final_web.py`).
-    2. **Documento de Evidencia:** Archivo oficial en PDF que describe la teoría de cada método, las capturas de la interfaz y la comprobación matemática analítica.
-    
-    *Desarrollado bajo las consideraciones y criterios de evaluación de la rúbrica oficial.*
-    """)
