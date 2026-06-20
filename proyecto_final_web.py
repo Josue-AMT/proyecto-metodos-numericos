@@ -92,6 +92,14 @@ with tab2:
             [2.0, 31.0],
             [3.0, 18.0]
         ])
+    if m == 5:
+        default_pts = np.array([
+            [-4.0, -242.0],
+            [2.0, 40.0],
+            [4.0, 278.0],
+            [6.0, 908.0],
+            [7.0, 1430.0]
+        ])
     df_pts = pd.DataFrame(default_pts, columns=["Coordenada X", "Coordenada Y (f(x))"])
     edited_pts = st.data_editor(df_pts, use_container_width=True, key="editor_pts_newton")
     
