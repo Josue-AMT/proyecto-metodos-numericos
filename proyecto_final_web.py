@@ -76,7 +76,6 @@ with tab1:
             st.markdown("**Matriz Identidad Aumentada Resultante:**")
             st.dataframe(pd.DataFrame(a, columns=column_names))
 
-# --- PESTAÑA 2: NEWTON ---
 with tab2:
     st.header("Interpolación Numérica de Newton")
     st.write("Encuentra el polinomio interpolador utilizando el método de Diferencias Divididas de Newton.")
@@ -103,7 +102,7 @@ with tab2:
     df_pts = pd.DataFrame(default_pts, columns=["Coordenada X", "Coordenada Y (f(x))"])
     edited_pts = st.data_editor(df_pts, use_container_width=True, key="editor_pts_newton")
     
-    xp = st.number_input("Valor de 'X' a evaluar/interpolar:", value=4.0)
+    xp = st.number_input("Valor de 'X' a evaluar/interpolar:", value=4.0, step=1.0)
     
     if st.button("Calcular Interpolación", type="primary"):
         pts_matrix = edited_pts.to_numpy(dtype=float).copy()
@@ -135,7 +134,6 @@ with tab2:
         
         with st.expander("Ver matriz de diferencias y desarrollo"):
             st.markdown("**Matriz de Diferencias Divididas (Diagonal principal = coeficientes):**")
-            # Mostrar la matriz bonita
             cols_name = ["f(x)"] + [f"Orden {i}" for i in range(1, n_p)]
             st.dataframe(pd.DataFrame(coef, columns=cols_name))
             
