@@ -151,7 +151,7 @@ with tab3:
         x0 = st.number_input("Condición inicial x0:", value=-3.0)
         y0 = st.number_input("Condición inicial y0:", value=4.0)
     with col2:
-        xf = st.number_input("Valor objetivo xf a evaluar:", value=-2.0)
+        xf = st.number_input("Valor objetivo xf a evaluar:", value=0)
         h = st.number_input("Tamaño del paso (h):", value=0.5, min_value=0.001, max_value=2.0)
         
     if st.button("Ejecutar Simulación", type="primary"):
