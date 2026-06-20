@@ -76,11 +76,12 @@ with tab1:
             st.markdown("**Matriz Identidad Aumentada Resultante:**")
             st.dataframe(pd.DataFrame(a, columns=column_names))
 
+# --- PESTAÑA 2: NEWTON ---
 with tab2:
-    st.header("Interpolación Numérica de Lagrange")
-    st.write("Encuentra el valor aproximado de una función polinomial en un punto objetivo dado un conjunto de coordenadas conocidas $(x, y)$.")
+    st.header("Interpolación Numérica de Newton")
+    st.write("Encuentra el polinomio interpolador utilizando el método de Diferencias Divididas de Newton.")
     
-    m = st.number_input("Cantidad de puntos conocidos:", min_value=2, max_value=10, value=4, step=1, key="lag_m")
+    m = st.number_input("Cantidad de puntos conocidos:", min_value=2, max_value=10, value=4, step=1, key="newton_m")
     
     st.subheader("Tabla de Coordenadas Conocidas")
     default_pts = np.zeros((m, 2))
@@ -91,32 +92,46 @@ with tab2:
             [2.0, 31.0],
             [3.0, 18.0]
         ])
-    df_pts = pd.DataFrame(default_pts, columns=["Coordenada X", "Coordenada Y"])
-    edited_pts = st.data_editor(df_pts, use_container_width=True, key="editor_pts")
+    df_pts = pd.DataFrame(default_pts, columns=["Coordenada X", "Coordenada Y (f(x))"])
+    edited_pts = st.data_editor(df_pts, use_container_width=True, key="editor_pts_newton")
     
     xp = st.number_input("Valor de 'X' a evaluar/interpolar:", value=4.0)
     
     if st.button("Calcular Interpolación", type="primary"):
-        pts_matrix = edited_pts.to_numpy(dtype=float)
+        pts_matrix = edited_pts.to_numpy(dtype=float).copy()
         x_vals = pts_matrix[:, 0]
         y_vals = pts_matrix[:, 1]
         
-        yp = 0.0
-        detalles = []
+        # Algoritmo de Diferencias Divididas
+        n_p = len(x_vals)
+        coef = np.zeros([n_p, n_p])
+        coef[:, 0] = y_vals # La primera columna son las Y originales
         
-        for i in range(m):
-            p = 1.0
-            terminos_texto = []
-            for j in range(m):
-                if i != j:
-                    p *= (xp - x_vals[j]) / (x_vals[i] - x_vals[j])
-            yp += p * y_vals[i]
-            detalles.append(f"Polinomio L_{i}({xp}) × y_{i} = {p:.4f} × {y_vals[i]} = {p * y_vals[i]:.4f}")
+        for j in range(1, n_p):
+            for i in range(n_p - j):
+                coef[i][j] = (coef[i+1][j-1] - coef[i][j-1]) / (x_vals[i+j] - x_vals[i])
+                
+        # Evaluación del Polinomio en xp
+        yp = coef[0, 0]
+        xterm = 1.0
+        detalles = [f"Coeficiente b_0 = {coef[0,0]:.4f}"]
+        
+        for i in range(1, n_p):
+            xterm *= (xp - x_vals[i-1])
+            term = coef[0, i] * xterm
+            yp += term
+            detalles.append(f"Término {i} añadido: b_{i} * (x-x0)... = {term:.4f}")
             
-        st.success(f"¡Cálculo completado!")
-        st.metric(label=f"Resultado estimado y({xp})", value=f"{yp:.4f}")
+        st.success(f"¡Cálculo completado mediante Diferencias Divididas!")
+        st.metric(label=f"Resultado estimado y({xp})", value=f"{yp:.4f}") # Te dará -89.00
         
-        with st.expander("Ver desarrollo paso a paso"):
+        with st.expander("Ver matriz de diferencias y desarrollo"):
+            st.markdown("**Matriz de Diferencias Divididas (Diagonal principal = coeficientes):**")
+            # Mostrar la matriz bonita
+            cols_name = ["f(x)"] + [f"Orden {i}" for i in range(1, n_p)]
+            st.dataframe(pd.DataFrame(coef, columns=cols_name))
+            
+            st.markdown("**Desarrollo de la evaluación:**")
             for d in detalles:
                 st.write(d)
 
