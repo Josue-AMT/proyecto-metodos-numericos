@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import math
+from fractions import Fraction
 
 st.set_page_config(
     page_title="Proyecto Final - Métodos Numéricos",
@@ -21,88 +22,103 @@ tab1, tab2, tab3 = st.tabs([
 
 # --- PESTAÑA 1: GAUSS-JORDAN ---
 with tab1:
-    st.header("Método de Eliminación de Gauss-Jordan (Paso a Paso)")
-    st.write("Resuelve un sistema de ecuaciones lineales mostrando cada transformación de la matriz aumentada.")
+    st.header("Método de Eliminación de Gauss-Jordan (Paso a Paso con Fracciones)")
+    st.write("Resuelve un sistema de ecuaciones lineales mostrando cada transformación de la matriz aumentada usando fracciones exactas.")
     
-    n = st.number_input("Número de variables / ecuaciones:", min_value=2, max_value=5, value=3, step=1, key="gj_n")
+    n = st.number_input("Número de variables / ecuaciones:", min_value=2, max_value=6, value=4, step=1, key="gj_n")
     
     st.subheader("Matriz Aumentada [A | B]")
-    st.info("Modifica los valores directamente en la tabla:")
+    st.info("Modifica los valores directamente en la tabla (la última columna es el resultado B):")
     
-    # Crear matriz inicial
+    # Crear matriz inicial (Puse los datos de tu Actividad 6 sistema b) como ejemplo predeterminado)
     default_matrix = np.zeros((n, n + 1))
-    if n == 3:
+    if n == 4:
         default_matrix = np.array([
-            [1.0, 2.0, 3.0, 5.0],
-            [-3.0, -2.0, -1.0, 7.0],
-            [4.0, 1.0, -1.0, -5.0]
+            [1.0, 2.0, -3.0, -1.0, 0.0],
+            [0.0, -3.0, 2.0, 6.0, -8.0],
+            [-3.0, -1.0, 3.0, 1.0, 0.0],
+            [2.0, 3.0, 2.0, -1.0, -8.0]
         ])
         
-    column_names = [f"x{i+1}" for i in range(n)] + ["Resultado (B)"]
+    column_names = [f"Var {i+1}" for i in range(n)] + ["Resultado (B)"]
     df_matrix = pd.DataFrame(default_matrix, columns=column_names)
     
     # Editor interactivo de datos
     edited_df = st.data_editor(df_matrix, use_container_width=True)
     
     if st.button("Resolver Sistema y Ver Pasos", type="primary"):
-        a = edited_df.to_numpy(dtype=float).copy()
+        # Convertimos la entrada a un arreglo de fracciones para evitar los decimales
+        a_floats = edited_df.to_numpy(dtype=float).copy()
+        a = np.empty((n, n+1), dtype=object)
+        for i in range(n):
+            for j in range(n+1):
+                a[i,j] = Fraction(a_floats[i,j]).limit_denominator()
+
         error = False
         
-        # Función "mágica" para convertir nuestra matriz a formato LaTeX visual
-        def matriz_a_latex(matriz):
+        # Función mágica para convertir la matriz de fracciones a formato LaTeX
+        def matriz_a_latex_frac(matriz):
             filas_latex = []
             for fila in matriz:
-                # Da formato a 3 decimales para no amontonar números
-                fila_texto = " & ".join([f"{val:.3f}" for val in fila])
-                filas_latex.append(fila_texto)
+                fila_texto = []
+                for val in fila:
+                    # Dar formato bonito a las fracciones en LaTeX
+                    if val.denominator == 1:
+                        fila_texto.append(f"{val.numerator}")
+                    else:
+                        fila_texto.append(f"\\frac{{{val.numerator}}}{{{val.denominator}}}")
+                filas_latex.append(" & ".join(fila_texto))
             return "\\begin{bmatrix} " + " \\\\ ".join(filas_latex) + " \\end{bmatrix}"
 
         st.markdown("---")
         st.subheader("📝 Desarrollo Matemático Iterativo")
         st.write("**Matriz Inicial:**")
-        st.latex(matriz_a_latex(a)) # Dibuja la matriz inicial
+        st.latex(matriz_a_latex_frac(a)) 
         
-        # Clonar para operaciones paso a paso
+        # Proceso de Gauss-Jordan
         for i in range(n):
             # 1. Chequeo de pivote cero e intercambio
-            if a[i][i] == 0.0:
+            if a[i][i] == 0:
                 for k in range(i + 1, n):
-                    if a[k][i] != 0.0:
-                        a[[i, k]] = a[[k, i]] # Intercambio de filas
-                        st.markdown(f"*Intercambiando Fila {i+1} con Fila {k+1} para evitar pivote cero:*")
-                        st.latex(matriz_a_latex(a))
+                    if a[k][i] != 0:
+                        a[[i, k]] = a[[k, i]] # Intercambio
+                        st.markdown(f"*🔄 Intercambiando Fila {i+1} con Fila {k+1} para evitar un pivote en cero:*")
+                        st.latex(matriz_a_latex_frac(a))
                         break
                 else:
-                    st.error("Error: Se detectó un pivote igual a cero sin fila de reemplazo válida.")
+                    st.error("❌ Error: Se detectó un pivote igual a cero sin fila de reemplazo válida. El sistema no tiene solución única.")
                     error = True
                     break
             
-            # 2. Convertir el pivote en 1
+            # 2. Hacer el pivote 1
             pivote = a[i][i]
-            if pivote != 1.0:
+            if pivote != 1:
                 a[i] = a[i] / pivote
-                st.markdown(f"**Paso {i+1}.1:** Dividiendo la Fila {i+1} entre su pivote ({pivote:.3f}) para hacerlo 1:")
-                st.latex(matriz_a_latex(a))
+                texto_piv = f"{pivote.numerator}" if pivote.denominator == 1 else f"{pivote.numerator}/{pivote.denominator}"
+                st.markdown(f"**Paso {i+1}.1:** Dividiendo la Fila {i+1} entre su pivote ({texto_piv}) para hacerlo 1:")
+                st.latex(matriz_a_latex_frac(a))
                 
-            # 3. Eliminación hacia adelante y atrás (hacer ceros la columna)
+            # 3. Hacer ceros el resto de la columna
             hubo_cambios = False
             for j in range(n):
-                if i != j and a[j][i] != 0.0:
+                if i != j and a[j][i] != 0:
                     ratio = a[j][i]
                     a[j] = a[j] - ratio * a[i]
                     hubo_cambios = True
                     
             if hubo_cambios:
-                st.markdown(f"**Paso {i+1}.2:** Haciendo ceros el resto de la Columna {i+1}:")
-                st.latex(matriz_a_latex(a))
+                st.markdown(f"**Paso {i+1}.2:** Haciendo ceros el resto de la Columna {i+1} restando múltiplos de la Fila pivote:")
+                st.latex(matriz_a_latex_frac(a))
                 
         if not error:
-            st.success("¡Sistema resuelto con éxito! Se ha llegado a la matriz identidad.")
-            st.subheader("💡 Solución Final:")
+            st.success("✨ ¡Sistema resuelto con éxito! Se ha llegado a la matriz identidad.")
+            st.subheader("💡 Solución Exacta:")
             
             col_results = st.columns(n)
             for i in range(n):
-                col_results[i].metric(label=f"Variable x_{i+1}", value=f"{a[i][n]:.4f}")
+                val = a[i][n]
+                texto_solucion = f"{val.numerator}" if val.denominator == 1 else f"{val.numerator}/{val.denominator}"
+                col_results[i].metric(label=f"Variable {i+1}", value=texto_solucion)
                 
 with tab2:
     st.header("Interpolación Numérica de Newton")
