@@ -32,6 +32,12 @@ with tab1:
     
     # Crear matriz inicial (Puse los datos de tu Actividad 6 sistema b) como ejemplo predeterminado)
     default_matrix = np.zeros((n, n + 1))
+    if n == 3:
+        default_matrix = np.array([
+            [1.0, 2.0, 3.0, 5.0],
+            [-3.0, -2.0, -1.0, 7.0],
+            [4.0, 1.0, -1.0, -5.0]
+        ])
     if n == 4:
         default_matrix = np.array([
             [1.0, 2.0, -3.0, -1.0, 0.0],
@@ -39,7 +45,7 @@ with tab1:
             [-3.0, -1.0, 3.0, 1.0, 0.0],
             [2.0, 3.0, 2.0, -1.0, -8.0]
         ])
-        
+    
     column_names = [f"Var {i+1}" for i in range(n)] + ["Resultado (B)"]
     df_matrix = pd.DataFrame(default_matrix, columns=column_names)
     
