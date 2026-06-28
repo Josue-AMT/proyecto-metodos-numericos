@@ -19,15 +19,17 @@ tab1, tab2, tab3 = st.tabs([
     "📉 3. Método de Euler (EDO)",
 ])
 
+# --- PESTAÑA 1: GAUSS-JORDAN ---
 with tab1:
-    st.header("Método de Eliminación de Gauss-Jordan")
-    st.write("Resuelve un sistema de ecuaciones lineales de la forma $Ax = B$ transformando la matriz aumentada en una matriz identidad.")
+    st.header("Método de Eliminación de Gauss-Jordan (Paso a Paso)")
+    st.write("Resuelve un sistema de ecuaciones lineales mostrando cada transformación de la matriz aumentada.")
     
     n = st.number_input("Número de variables / ecuaciones:", min_value=2, max_value=5, value=3, step=1, key="gj_n")
     
     st.subheader("Matriz Aumentada [A | B]")
-    st.info("Modifica los valores directamente en la tabla tipo Excel de abajo (la última columna representa el vector de resultados B):")
+    st.info("Modifica los valores directamente en la tabla:")
     
+    # Crear matriz inicial
     default_matrix = np.zeros((n, n + 1))
     if n == 3:
         default_matrix = np.array([
@@ -39,43 +41,69 @@ with tab1:
     column_names = [f"x{i+1}" for i in range(n)] + ["Resultado (B)"]
     df_matrix = pd.DataFrame(default_matrix, columns=column_names)
     
+    # Editor interactivo de datos
     edited_df = st.data_editor(df_matrix, use_container_width=True)
     
-    if st.button("Resolver Sistema", type="primary"):
+    if st.button("Resolver Sistema y Ver Pasos", type="primary"):
         a = edited_df.to_numpy(dtype=float).copy()
         error = False
         
+        # Función "mágica" para convertir nuestra matriz a formato LaTeX visual
+        def matriz_a_latex(matriz):
+            filas_latex = []
+            for fila in matriz:
+                # Da formato a 3 decimales para no amontonar números
+                fila_texto = " & ".join([f"{val:.3f}" for val in fila])
+                filas_latex.append(fila_texto)
+            return "\\begin{bmatrix} " + " \\\\ ".join(filas_latex) + " \\end{bmatrix}"
+
+        st.markdown("---")
+        st.subheader("📝 Desarrollo Matemático Iterativo")
+        st.write("**Matriz Inicial:**")
+        st.latex(matriz_a_latex(a)) # Dibuja la matriz inicial
+        
+        # Clonar para operaciones paso a paso
         for i in range(n):
+            # 1. Chequeo de pivote cero e intercambio
             if a[i][i] == 0.0:
                 for k in range(i + 1, n):
                     if a[k][i] != 0.0:
-                        a[[i, k]] = a[[k, i]]
+                        a[[i, k]] = a[[k, i]] # Intercambio de filas
+                        st.markdown(f"*Intercambiando Fila {i+1} con Fila {k+1} para evitar pivote cero:*")
+                        st.latex(matriz_a_latex(a))
                         break
                 else:
-                    st.error("Error: Se detectó un pivote igual a cero. El sistema puede no tener solución única.")
+                    st.error("Error: Se detectó un pivote igual a cero sin fila de reemplazo válida.")
                     error = True
                     break
             
-            # Eliminación
-            for j in range(n):
-                if i != j:
-                    ratio = a[j][i] / a[i][i]
-                    a[j] = a[j] - ratio * a[i]
-                    
-        if not error:
-            for i in range(n):
-                a[i] = a[i] / a[i][i]
+            # 2. Convertir el pivote en 1
+            pivote = a[i][i]
+            if pivote != 1.0:
+                a[i] = a[i] / pivote
+                st.markdown(f"**Paso {i+1}.1:** Dividiendo la Fila {i+1} entre su pivote ({pivote:.3f}) para hacerlo 1:")
+                st.latex(matriz_a_latex(a))
                 
-            st.success("¡Sistema resuelto con éxito!")
-            st.subheader("💡 Solución:")
+            # 3. Eliminación hacia adelante y atrás (hacer ceros la columna)
+            hubo_cambios = False
+            for j in range(n):
+                if i != j and a[j][i] != 0.0:
+                    ratio = a[j][i]
+                    a[j] = a[j] - ratio * a[i]
+                    hubo_cambios = True
+                    
+            if hubo_cambios:
+                st.markdown(f"**Paso {i+1}.2:** Haciendo ceros el resto de la Columna {i+1}:")
+                st.latex(matriz_a_latex(a))
+                
+        if not error:
+            st.success("¡Sistema resuelto con éxito! Se ha llegado a la matriz identidad.")
+            st.subheader("💡 Solución Final:")
             
             col_results = st.columns(n)
             for i in range(n):
                 col_results[i].metric(label=f"Variable x_{i+1}", value=f"{a[i][n]:.4f}")
                 
-            st.markdown("**Matriz Identidad Aumentada Resultante:**")
-            st.dataframe(pd.DataFrame(a, columns=column_names))
-
 with tab2:
     st.header("Interpolación Numérica de Newton")
     st.write("Encuentra el polinomio interpolador utilizando el método de Diferencias Divididas de Newton.")
