@@ -3,12 +3,64 @@ import numpy as np
 import pandas as pd
 import math
 from fractions import Fraction
+from functools import lru_cache
 
+# Configuración de caché para mejorar rendimiento
 st.set_page_config(
     page_title="Proyecto Final - Métodos Numéricos",
     page_icon="🧮",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
+
+# Funciones cacheadas para cálculos pesados
+@st.cache_data
+def convertir_a_fracciones(matriz_tuple, n):
+    """Convierte matriz de floats a fracciones con caché"""
+    a = np.empty((n, n+1), dtype=object)
+    for i in range(n):
+        for j in range(n+1):
+            a[i,j] = Fraction(matriz_tuple[i][j]).limit_denominator()
+    return a
+
+@st.cache_data
+def calcular_diferencias_divididas(x_tuple, y_tuple):
+    """Calcula matriz de diferencias divididas con caché"""
+    x_vals = np.array(x_tuple)
+    y_vals = np.array(y_tuple)
+    n_p = len(x_vals)
+    coef = np.zeros([n_p, n_p])
+    coef[:, 0] = y_vals
+    
+    for j in range(1, n_p):
+        for i in range(n_p - j):
+            if x_vals[i+j] != x_vals[i]:
+                coef[i][j] = (coef[i+1][j-1] - coef[i][j-1]) / (x_vals[i+j] - x_vals[i])
+    
+    return coef
+
+@lru_cache(maxsize=128)
+def evaluar_funcion(expr, x, y):
+    """Evalúa expresión matemática con caché LRU"""
+    try:
+        return eval(expr, {"__builtins__": None, "math": math}, {"x": x, "y": y})
+    except:
+        return 0.0
+
+@st.cache_data(hash_funcs={Fraction: str})
+def matriz_a_latex_frac_cached(matriz_tuple, n):
+    """Convierte matriz de fracciones a LaTeX con caché"""
+    matriz = np.array(matriz_tuple).reshape(n, n+1)
+    filas_latex = []
+    for fila in matriz:
+        fila_texto = []
+        for val in fila:
+            if val.denominator == 1:
+                fila_texto.append(f"{val.numerator}")
+            else:
+                fila_texto.append(f"\\frac{{{val.numerator}}}{{{val.denominator}}}")
+        filas_latex.append(" & ".join(fila_texto))
+    return "\\begin{bmatrix} " + " \\\\ ".join(filas_latex) + " \\end{bmatrix}"
 
 st.title("🧮 Aplicación Interactiva de Métodos Numéricos")
 st.markdown("### Materia: Matemáticas Aplicadas para la Computación (Proyecto Final)")
@@ -30,7 +82,6 @@ with tab1:
     st.subheader("Matriz Aumentada [A | B]")
     st.info("Modifica los valores directamente en la tabla (la última columna es el resultado B):")
     
-    # Crear matriz inicial (Puse los datos de tu Actividad 6 sistema b) como ejemplo predeterminado)
     default_matrix = np.zeros((n, n + 1))
     if n == 3:
         default_matrix = np.array([
@@ -49,62 +100,39 @@ with tab1:
     column_names = [f"Var {i+1}" for i in range(n)] + ["Resultado (B)"]
     df_matrix = pd.DataFrame(default_matrix, columns=column_names)
     
-    # Editor interactivo de datos
     edited_df = st.data_editor(df_matrix, use_container_width=True)
     
     if st.button("Resolver Sistema y Ver Pasos", type="primary"):
-        # Convertimos la entrada a un arreglo de fracciones para evitar los decimales
         a_floats = edited_df.to_numpy(dtype=float).copy()
-        a = np.empty((n, n+1), dtype=object)
-        for i in range(n):
-            for j in range(n+1):
-                a[i,j] = Fraction(a_floats[i,j]).limit_denominator()
+        a = convertir_a_fracciones(tuple(map(tuple, a_floats)), n)
 
         error = False
         
-        # Función mágica para convertir la matriz de fracciones a formato LaTeX
-        def matriz_a_latex_frac(matriz):
-            filas_latex = []
-            for fila in matriz:
-                fila_texto = []
-                for val in fila:
-                    # Dar formato bonito a las fracciones en LaTeX
-                    if val.denominator == 1:
-                        fila_texto.append(f"{val.numerator}")
-                    else:
-                        fila_texto.append(f"\\frac{{{val.numerator}}}{{{val.denominator}}}")
-                filas_latex.append(" & ".join(fila_texto))
-            return "\\begin{bmatrix} " + " \\\\ ".join(filas_latex) + " \\end{bmatrix}"
-
         st.markdown("---")
         st.subheader("📝 Desarrollo Matemático Iterativo")
         st.write("**Matriz Inicial:**")
-        st.latex(matriz_a_latex_frac(a)) 
+        st.latex(matriz_a_latex_frac_cached(tuple(a.flatten()), n)) 
         
-        # Proceso de Gauss-Jordan
         for i in range(n):
-            # 1. Chequeo de pivote cero e intercambio
             if a[i][i] == 0:
                 for k in range(i + 1, n):
                     if a[k][i] != 0:
-                        a[[i, k]] = a[[k, i]] # Intercambio
+                        a[[i, k]] = a[[k, i]]
                         st.markdown(f"*🔄 Intercambiando Fila {i+1} con Fila {k+1} para evitar un pivote en cero:*")
-                        st.latex(matriz_a_latex_frac(a))
+                        st.latex(matriz_a_latex_frac_cached(tuple(a.flatten()), n))
                         break
                 else:
                     st.error("❌ Error: Se detectó un pivote igual a cero sin fila de reemplazo válida. El sistema no tiene solución única.")
                     error = True
                     break
             
-            # 2. Hacer el pivote 1
             pivote = a[i][i]
             if pivote != 1:
                 a[i] = a[i] / pivote
                 texto_piv = f"{pivote.numerator}" if pivote.denominator == 1 else f"{pivote.numerator}/{pivote.denominator}"
                 st.markdown(f"**Paso {i+1}.1:** Dividiendo la Fila {i+1} entre su pivote ({texto_piv}) para hacerlo 1:")
-                st.latex(matriz_a_latex_frac(a))
+                st.latex(matriz_a_latex_frac_cached(tuple(a.flatten()), n))
                 
-            # 3. Hacer ceros el resto de la columna
             hubo_cambios = False
             for j in range(n):
                 if i != j and a[j][i] != 0:
@@ -114,7 +142,7 @@ with tab1:
                     
             if hubo_cambios:
                 st.markdown(f"**Paso {i+1}.2:** Haciendo ceros el resto de la Columna {i+1} restando múltiplos de la Fila pivote:")
-                st.latex(matriz_a_latex_frac(a))
+                st.latex(matriz_a_latex_frac_cached(tuple(a.flatten()), n))
                 
         if not error:
             st.success("✨ ¡Sistema resuelto con éxito! Se ha llegado a la matriz identidad.")
@@ -159,32 +187,24 @@ with tab2:
         x_vals = pts_matrix[:, 0]
         y_vals = pts_matrix[:, 1]
         
-        # Algoritmo de Diferencias Divididas
-        n_p = len(x_vals)
-        coef = np.zeros([n_p, n_p])
-        coef[:, 0] = y_vals # La primera columna son las Y originales
+        coef = calcular_diferencias_divididas(tuple(x_vals), tuple(y_vals))
         
-        for j in range(1, n_p):
-            for i in range(n_p - j):
-                coef[i][j] = (coef[i+1][j-1] - coef[i][j-1]) / (x_vals[i+j] - x_vals[i])
-                
-        # Evaluación del Polinomio en xp
         yp = coef[0, 0]
         xterm = 1.0
         detalles = [f"Coeficiente b_0 = {coef[0,0]:.4f}"]
         
-        for i in range(1, n_p):
+        for i in range(1, len(x_vals)):
             xterm *= (xp - x_vals[i-1])
             term = coef[0, i] * xterm
             yp += term
             detalles.append(f"Término {i} añadido: b_{i} * (x-x0)... = {term:.4f}")
             
         st.success(f"¡Cálculo completado mediante Diferencias Divididas!")
-        st.metric(label=f"Resultado estimado y({xp})", value=f"{yp:.4f}") # Te dará -89.00
+        st.metric(label=f"Resultado estimado y({xp})", value=f"{yp:.4f}")
         
         with st.expander("Ver matriz de diferencias y desarrollo"):
             st.markdown("**Matriz de Diferencias Divididas (Diagonal principal = coeficientes):**")
-            cols_name = ["f(x)"] + [f"Orden {i}" for i in range(1, n_p)]
+            cols_name = ["f(x)"] + [f"Orden {i}" for i in range(1, len(x_vals))]
             st.dataframe(pd.DataFrame(coef, columns=cols_name))
             
             st.markdown("**Desarrollo de la evaluación:**")
@@ -193,7 +213,7 @@ with tab2:
 
 with tab3:
     st.header("Método de Euler para Ecuaciones Diferenciales")
-    st.write("Aproxima numéricamente la solución de una ecuación diferencial ordinaria (EDO) de primer orden de la forma $\frac{dy}{dx} = f(x, y)$.")
+    st.write("Aproxima numéricamente la solución de una ecuación diferencial ordinaria (EDO) de primer orden de la forma $\\frac{dy}{dx} = f(x, y)$.")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -214,21 +234,18 @@ with tab3:
                 "Iteración": 0,
                 "x": x,
                 "y": y,
-                "f(x,y)": eval(expr, {"__builtins__": None, "math": math}, {"x": x, "y": y})
+                "f(x,y)": evaluar_funcion(expr, x, y)
             }]
             
             for i in range(1, steps + 1):
-                f_val = eval(expr, {"__builtins__": None, "math": math}, {"x": x, "y": y})
+                f_val = evaluar_funcion(expr, x, y)
                 y = y + h * f_val
                 if xf > x0:
                     x = x + h
                 else:
                     x = x - h
                 
-                try:
-                    f_val_next = eval(expr, {"__builtins__": None, "math": math}, {"x": x, "y": y})
-                except:
-                    f_val_next = 0.0
+                f_val_next = evaluar_funcion(expr, x, y)
                     
                 iteraciones.append({
                     "Iteración": i,
